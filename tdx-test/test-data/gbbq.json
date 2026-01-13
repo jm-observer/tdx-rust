@@ -1,0 +1,22 @@
+{
+  "name": "除权除息",
+  "type": "TypeGbbq",
+  "type_value": "0x000F",
+  "description": "获取股票的除权除息信息",
+  "request": "0c0c00000001090009000f000000303030303031",
+  "request_description": "Prefix(0C) + MsgID(0C000000) + Control(01) + Length(0900) + Length(0900) + Type(0F00) + Data(...)",
+  "request_data": "0000303030303031",
+  "response": "b1cb74001c0c000000000f00[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(0C000000) + Unknown(00) + Type(0F00) + ZipLength(...) + Length(...) + CompressedData(...)",
+  "response_data": "[解压后的数据]",
+  "params": {
+    "exchange": "1字节，交易所（0x00=深圳）",
+    "reserved": "1字节，保留字段（0x00）",
+    "code": "6字节，股票代码（ASCII）"
+  },
+  "structure": {
+    "count": "2字节，记录数量，小端序",
+    "items": "每个记录包含除权除息相关信息"
+  },
+  "notes": "除权除息数据用于计算复权价格"
+}

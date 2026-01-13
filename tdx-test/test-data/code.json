@@ -1,0 +1,26 @@
+{
+  "name": "获取股票代码列表",
+  "type": "TypeCode",
+  "type_value": "0x0450",
+  "description": "获取指定交易所的股票代码列表，一次返回1000只",
+  "request": "0c040000000106000600500400000000",
+  "request_description": "Prefix(0C) + MsgID(04000000) + Control(01) + Length(0600) + Length(0600) + Type(5004) + Data(00 00 0000)",
+  "request_data": "00000000",
+  "response": "b1cb74001c04000000005004a200a200[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(04000000) + Unknown(00) + Type(5004) + ZipLength(A200) + Length(A200) + CompressedData(...)",
+  "response_data": "[解压后的数据，包含Count(2字节) + Code结构×Count]",
+  "params": {
+    "exchange": "ExchangeSH (0x00 = 深圳, 0x01 = 上海, 0x02 = 北京)",
+    "start": "起始索引，小端序，示例0x0000 = 0"
+  },
+  "code_structure": {
+    "code": "6字节，ASCII字符串",
+    "multiple": "2字节，倍数，通常为100 (0x64)",
+    "name": "8字节，GBK编码的股票名称",
+    "reserved": "4字节，保留字段",
+    "decimal": "1字节，小数点位数，通常为2",
+    "last_price": "4字节，昨收价格（特殊编码）",
+    "reserved2": "4字节，保留字段"
+  },
+  "notes": "每个Code结构29字节，一次返回1000只股票，共29000字节数据"
+}

@@ -1,0 +1,39 @@
+{
+  "name": "行情信息（5档报价）",
+  "type": "TypeQuote",
+  "type_value": "0x053E",
+  "description": "获取股票的实时行情信息，包括5档买卖盘",
+  "request": "0c05000000011a001a003e05050000000000000002000030303030303101363030303038",
+  "request_description": "Prefix(0C) + MsgID(05000000) + Control(01) + Length(1A00) + Length(1A00) + Type(3E05) + Data(...)",
+  "request_data": "050000000000000002000030303030303101363030303038",
+  "response": "b1cb74001c05000000003e05af00af000136020000303030303031320bb2124c56105987e6d10cf212b78fa801ae01293dc54e8bd740acb8670086ca1e0001af36ba0c4102b467b6054203a68a0184094304891992114405862685108d0100000000e8ff320b0136303030303859098005464502468defd10cc005bed2668e05be15804d8ba12cb3b13a0083c3034100badc029d014201bc990384f70443029da503b7af074403a6e501b9db044504a6e2028dd5048d050000000000005909",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(05000000) + Unknown(00) + Type(3E05) + ZipLength(AF00) + Length(AF00) + Data(...)",
+  "response_data": "0136020000303030303031320bb2124c56105987e6d10cf212b78fa801ae01293dc54e8bd740acb8670086ca1e0001af36ba0c4102b467b6054203a68a0184094304891992114405862685108d0100000000e8ff320b0136303030303859098005464502468defd10cc005bed2668e05be15804d8ba12cb3b13a0083c3034100badc029d014201bc990384f70443029da503b7af074403a6e501b9db044504a6e2028dd5048d050000000000005909",
+  "params": {
+    "header": "05 00 00 00 00 00 00 00 (8字节固定头)",
+    "count": "2字节，股票数量，小端序",
+    "codes": "每个股票：Exchange(1字节) + Code(6字节ASCII)"
+  },
+  "quote_structure": {
+    "exchange": "1字节，交易所",
+    "code": "6字节，股票代码",
+    "active1": "2字节，活跃度",
+    "k": "6字节，K线数据（昨收、今开、最高、最低、今收）",
+    "server_time": "4字节，服务器时间",
+    "reversed_bytes1": "4字节，保留字段",
+    "total_hand": "变长，总手",
+    "intuition": "变长，现量",
+    "amount": "4字节，金额（特殊编码）",
+    "inside_dish": "变长，内盘",
+    "outer_disc": "变长，外盘",
+    "reversed_bytes2": "变长，保留字段",
+    "reversed_bytes3": "变长，保留字段",
+    "buy_levels": "5档买盘，每档10字节（买价+卖价+买量+卖量）",
+    "sell_levels": "5档卖盘，每档10字节",
+    "reversed_bytes4": "2字节，保留字段",
+    "reversed_bytes5-9": "多个保留字段",
+    "rate": "2字节，涨速",
+    "active2": "2字节，活跃度"
+  },
+  "notes": "请求示例包含2只股票：sz000001 和 sh600008。5档报价的价格是相对于收盘价的差值"
+}

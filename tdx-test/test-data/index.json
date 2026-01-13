@@ -1,0 +1,78 @@
+{
+  "test_files": [
+    {
+      "name": "connect",
+      "description": "建立连接",
+      "type": "TypeConnect",
+      "type_value": "0x000D"
+    },
+    {
+      "name": "heartbeat",
+      "description": "心跳包",
+      "type": "TypeHeart",
+      "type_value": "0x0004"
+    },
+    {
+      "name": "count",
+      "description": "获取股票数量",
+      "type": "TypeCount",
+      "type_value": "0x044E"
+    },
+    {
+      "name": "code",
+      "description": "获取股票代码列表",
+      "type": "TypeCode",
+      "type_value": "0x0450"
+    },
+    {
+      "name": "quote",
+      "description": "行情信息（5档报价）",
+      "type": "TypeQuote",
+      "type_value": "0x053E"
+    },
+    {
+      "name": "kline",
+      "description": "K线数据",
+      "type": "TypeKline",
+      "type_value": "0x052D"
+    },
+    {
+      "name": "minute",
+      "description": "分时数据",
+      "type": "TypeMinute",
+      "type_value": "0x051D"
+    },
+    {
+      "name": "trade",
+      "description": "分时成交",
+      "type": "TypeMinuteTrade",
+      "type_value": "0x0FC5"
+    },
+    {
+      "name": "history_minute",
+      "description": "历史分时数据",
+      "type": "TypeHistoryMinute",
+      "type_value": "0x0FB4"
+    },
+    {
+      "name": "history_trade",
+      "description": "历史分时成交",
+      "type": "TypeHistoryMinuteTrade",
+      "type_value": "0x0FB5"
+    },
+    {
+      "name": "call_auction",
+      "description": "集合竞价",
+      "type": "TypeCallAuction",
+      "type_value": "0x056A"
+    },
+    {
+      "name": "gbbq",
+      "description": "除权除息",
+      "type": "TypeGbbq",
+      "type_value": "0x000F"
+    }
+  ],
+  "version": "1.0",
+  "last_updated": "2025-01-10"
+}

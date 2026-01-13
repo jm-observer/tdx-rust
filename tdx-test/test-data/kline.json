@@ -1,0 +1,50 @@
+{
+  "name": "K线数据",
+  "type": "TypeKline",
+  "type_value": "0x052D",
+  "description": "获取股票的K线数据，支持多种周期",
+  "request": "0c06000000011c001c002d0500003030303030310900010000000a0000000000000000000000",
+  "request_description": "Prefix(0C) + MsgID(06000000) + Control(01) + Length(1C00) + Length(1C00) + Type(2D05) + Data(...)",
+  "request_data": "00003030303030310900010000000a0000000000000000000000",
+  "response": "b1cb74001c06000000002d05[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(06000000) + Unknown(00) + Type(2D05) + ZipLength(...) + Length(...) + CompressedData(...)",
+  "response_data": "0a0078da340198b8018404bc055ee8b3e949ad2b094f79da34010af801a002cc0260dec949859ded4e7ada34016882028e04e603b8f91e4a111f394f7dda3401e401c20200f604f84d2b4ad4d0444f7eda3401721eaa0268d87bc549ee80e34e7fda34011e288601c601d08db849230ed54e80da3401727c32da013023584999a0784e81da3401147c0ad001d0fa86498d989a4e84da34015e6800d60278c28e491ca6a14e85da340154d001b801da01403e924989d6a54e",
+  "params": {
+    "exchange": "1字节，交易所（0x00=深圳）",
+    "reserved": "1字节，保留字段（0x00）",
+    "code": "6字节，股票代码（ASCII）",
+    "kline_type": "1字节，K线类型（0x09=日K线）",
+    "reserved2": "1字节，保留字段（0x00）",
+    "reserved3": "2字节，固定为0x0001",
+    "start": "2字节，起始位置，小端序",
+    "count": "2字节，请求数量，小端序（最大800）",
+    "reserved4": "10字节，保留字段"
+  },
+  "kline_types": {
+    "0": "5分钟K线",
+    "1": "15分钟K线",
+    "2": "30分钟K线",
+    "3": "60分钟K线（1小时）",
+    "4": "日K线（需除以100）",
+    "5": "周K线",
+    "6": "月K线",
+    "7": "1分钟K线",
+    "8": "1分钟K线（变体）",
+    "9": "日K线",
+    "10": "季K线",
+    "11": "年K线"
+  },
+  "kline_structure": {
+    "count": "2字节，K线数量，小端序",
+    "kline_items": "每个K线项包含：",
+    "time": "4字节，时间（特殊编码）",
+    "open": "变长，开盘价差值",
+    "close": "变长，收盘价差值",
+    "high": "变长，最高价差值",
+    "low": "变长，最低价差值",
+    "volume": "4字节，成交量（特殊编码）",
+    "amount": "4字节，成交额（特殊编码，单位：厘）",
+    "index_fields": "指数数据额外包含：UpCount(2字节) + DownCount(2字节)"
+  },
+  "notes": "K线价格是差值，需要累加计算。分钟K线的成交量需要除以100，指数的成交量需要乘以100"
+}

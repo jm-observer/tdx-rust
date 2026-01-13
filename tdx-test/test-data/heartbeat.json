@@ -1,0 +1,13 @@
+{
+  "name": "心跳包",
+  "type": "TypeHeart",
+  "type_value": "0x0004",
+  "description": "每30秒发送一次心跳包，保持连接活跃",
+  "request": "0c0200000001020002000400",
+  "request_description": "Prefix(0C) + MsgID(02000000) + Control(01) + Length(0200) + Length(0200) + Type(0400) + Data(空)",
+  "response": "b1cb74001c0200000000040000000000",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(02000000) + Unknown(00) + Type(0400) + ZipLength(0000) + Length(0000) + Data(空)",
+  "response_data": "",
+  "params": {},
+  "notes": "心跳包通常无响应或返回简单确认，数据域为空"
+}

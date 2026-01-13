@@ -1,0 +1,31 @@
+{
+  "name": "历史分时成交",
+  "type": "TypeHistoryMinuteTrade",
+  "type_value": "0x0FB5",
+  "description": "获取指定日期的历史分时成交明细",
+  "request": "0c0a0000000116001600b50f202401010000303030303031000000000a00",
+  "request_description": "Prefix(0C) + MsgID(0A000000) + Control(01) + Length(1600) + Length(1600) + Type(B50F) + Data(...)",
+  "request_data": "202401010000303030303031000000000a00",
+  "response": "b1cb74001c0a00000000b50f[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(0A000000) + Unknown(00) + Type(B50F) + ZipLength(...) + Length(...) + CompressedData(...)",
+  "response_data": "[解压后的数据]",
+  "params": {
+    "date": "4字节，日期（YYYYMMDD格式，小端序），示例：20240101",
+    "exchange": "1字节，交易所（0x00=深圳）",
+    "reserved": "1字节，保留字段（0x00）",
+    "code": "6字节，股票代码（ASCII）",
+    "start": "2字节，起始位置，小端序",
+    "count": "2字节，请求数量，小端序"
+  },
+  "structure": {
+    "count": "2字节，成交记录数量，小端序",
+    "reserved": "4字节，保留字段",
+    "items": "每个成交记录包含：",
+    "time": "2字节，时间（HourMinute格式）",
+    "price": "变长，价格差值（单位：分，需转换为厘）",
+    "volume": "变长，成交量（手）",
+    "status": "变长，状态（0=买入，1=卖出，2=中性/汇总）",
+    "unknown": "变长，未知字段"
+  },
+  "notes": "历史分时成交的Number字段无效。日期格式为YYYYMMDD（小端序）"
+}

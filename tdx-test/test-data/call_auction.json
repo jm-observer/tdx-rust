@@ -1,0 +1,29 @@
+{
+  "name": "集合竞价",
+  "type": "TypeCallAuction",
+  "type_value": "0x056A",
+  "description": "获取股票当天的集合竞价数据",
+  "request": "0c0b000000011e001e006a05000030303030303100000000030000000000000000000000f4010000",
+  "request_description": "Prefix(0C) + MsgID(0B000000) + Control(01) + Length(1E00) + Length(1E00) + Type(6A05) + Data(...)",
+  "request_data": "000030303030303100000000030000000000000000000000f4010000",
+  "response": "b1cb74001c0b000000006a05[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(0B000000) + Unknown(00) + Type(6A05) + ZipLength(...) + Length(...) + CompressedData(...)",
+  "response_data": "[解压后的数据]",
+  "params": {
+    "exchange": "1字节，交易所（0x00=深圳）",
+    "reserved": "1字节，保留字段（0x00）",
+    "code": "6字节，股票代码（ASCII）",
+    "reserved2": "20字节，保留字段"
+  },
+  "structure": {
+    "count": "2字节，数据点数量，小端序",
+    "items": "每个数据点包含：",
+    "time": "2字节，时间（HourMinute格式）",
+    "price": "4字节，价格（Float32，单位：元，需转换为厘）",
+    "match": "2字节，匹配量（小端序）",
+    "unmatched": "2字节，未匹配量（有符号整数，小端序）",
+    "second": "1字节，秒数",
+    "reserved": "5字节，保留字段"
+  },
+  "notes": "未匹配量的符号表示方向：正数表示买单，负数表示卖单。每个数据点16字节"
+}

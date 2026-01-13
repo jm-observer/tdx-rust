@@ -1,0 +1,15 @@
+{
+  "name": "建立连接",
+  "type": "TypeConnect",
+  "type_value": "0x000D",
+  "description": "客户端连接服务器后，首先发送连接请求建立会话",
+  "request": "0c0100000001030003000d0001",
+  "request_description": "Prefix(0C) + MsgID(01000000) + Control(01) + Length(0300) + Length(0300) + Type(0D00) + Data(01)",
+  "response": "b1cb74001c00000000000d005100bd00789c6378c1cecb252ace6066c5b4898987b9050ed1f90cc5b74c18a5bc18c1b43490fecff09c81819191f13fc3c9f3bb169f5e7dfefeb5ef57f7199a305009308208e5b32bb6bcbf70148712002d7f1e13",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(00000000) + Unknown(00) + Type(0D00) + ZipLength(5100) + Length(BD00) + CompressedData(...)",
+  "response_data": "6378c1cecb252ace6066c5b4898987b9050ed1f90cc5b74c18a5bc18c1b43490fecff09c81819191f13fc3c9f3bb169f5e7dfefeb5ef57f7199a305009308208e5b32bb6bcbf70148712002d7f1e13",
+  "params": {
+    "data": "0x01"
+  },
+  "notes": "响应数据前68字节未知，后续为GBK编码的字符串信息"
+}

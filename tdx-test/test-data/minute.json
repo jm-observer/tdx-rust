@@ -1,0 +1,27 @@
+{
+  "name": "分时数据",
+  "type": "TypeMinute",
+  "type_value": "0x051D",
+  "description": "获取股票当天的分时数据",
+  "request": "0c07000000010e000e001d05000030303030303100000000",
+  "request_description": "Prefix(0C) + MsgID(07000000) + Control(01) + Length(0E00) + Length(0E00) + Type(1D05) + Data(...)",
+  "request_data": "000030303030303100000000",
+  "response": "b1cb74001c07000000001d05[压缩数据...]",
+  "response_description": "Prefix(B1CB7400) + Control(1C) + MsgID(07000000) + Unknown(00) + Type(1D05) + ZipLength(...) + Length(...) + CompressedData(...)",
+  "response_data": "[解压后的数据]",
+  "params": {
+    "exchange": "1字节，交易所（0x00=深圳）",
+    "reserved": "1字节，保留字段（0x00）",
+    "code": "6字节，股票代码（ASCII）",
+    "reserved2": "4字节，保留字段（0x00000000）"
+  },
+  "minute_structure": {
+    "count": "2字节，数据点数量，小端序",
+    "reserved": "4字节，保留字段",
+    "items": "每个数据点包含：",
+    "price": "变长，价格差值",
+    "unknown": "变长，未知字段",
+    "number": "变长，成交量（手）"
+  },
+  "notes": "时间从09:00开始，每分钟递增，第120分钟后跳到13:01。价格是差值，需要累加计算"
+}

@@ -1,0 +1,3 @@
+[submodule "tdx"]
+	path = tdx
+	url = https://github.com/injoyai/tdx.git

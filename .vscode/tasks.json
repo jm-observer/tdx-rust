@@ -1,0 +1,176 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "tdx-test: 验证所有测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyAll"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 验证连接测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyConnect"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 验证心跳包测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyHeartbeat"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 验证股票数量测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyCount"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 验证行情信息测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyQuote"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 验证K线测试数据",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "test",
+                "-v",
+                "-run",
+                "TestVerifyKline"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "tdx-test: 初始化 Go 模块",
+            "type": "shell",
+            "command": "go",
+            "args": [
+                "mod",
+                "tidy"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/tdx-test"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$go"
+            ]
+        }
+    ]
+}

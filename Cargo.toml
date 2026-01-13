@@ -1,0 +1,39 @@
+[package]
+name = "tdx-sync-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytes = "1.5"
+flate2 = "1.0"
+encoding_rs = "0.8"
+thiserror = "1.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.0", features = ["sync", "time"] }
+rand = "0.8"
+hex = "0.4"
+log = "0.4"
+env_logger = "0.11"
+
+[dev-dependencies]
+hex = "0.4"
+
+[features]
+test-data = []
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"
+
+[[example]]
+name = "fast_hosts"
+path = "examples/fast_hosts.rs"
+
+[[example]]
+name = "kline_all"
+path = "examples/kline_all.rs"
+
+[[example]]
+name = "gbbq"
+path = "examples/gbbq.rs"
