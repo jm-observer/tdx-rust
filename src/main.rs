@@ -1,4 +1,4 @@
-use tdx_sync_rust::protocol::*;
+use tdx_rust::protocol::*;
 
 fn main() {
     println!("TDX Sync Rust - 通达信协议 Rust 实现");

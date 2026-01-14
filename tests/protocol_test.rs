@@ -1,8 +1,8 @@
 //! 协议测试 - 使用测试数据验证协议逻辑
 
 use std::fs;
-use tdx_sync_rust::protocol::*;
-use tdx_sync_rust::protocol::test_data::TestData;
+use tdx_rust::protocol::*;
+use tdx_rust::protocol::test_data::TestData;
 
 /// 加载测试数据文件
 fn load_test_data(filename: &str) -> Result<TestData, Box<dyn std::error::Error>> {

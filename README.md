@@ -1,6 +1,10 @@
-# TDX Sync Rust
+# TDX Rust
 
 通达信协议解析的 Rust 实现，用于获取股票信息。
+
+这是一个基于 https://github.com/injoyai/tdx 实现的 Rust 版本 通达信协议解析库，用于获取A股/股票相关信息（如行情、K线、分时等数据）。
+特别感谢原 Go 语言版本作者 injoyai 的优秀工作和开源贡献！
+原项目地址：https://github.com/injoyai/tdx （一个功能完善、社区认可度较高的通达信协议 Go 实现
 
 ## 功能特性
 

@@ -391,7 +391,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tdx-sync-rust"
+name = "tdx-rust"
 version = "0.1.0"
 dependencies = [
  "bytes",

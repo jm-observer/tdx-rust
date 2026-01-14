@@ -1,6 +1,6 @@
 //! 获取所有K线数据示例 - 展示各种周期的K线
 
-use tdx_sync_rust::*;
+use tdx_rust::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> Result<(), ClientError> {

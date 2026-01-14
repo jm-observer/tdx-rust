@@ -1,6 +1,6 @@
 //! 基本使用示例
 
-use tdx_sync_rust::*;
+use tdx_rust::*;
 
 fn main() -> Result<(), ClientError> {
     println!("=== TDX Rust 客户端示例 ===\n");

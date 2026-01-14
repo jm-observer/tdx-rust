@@ -1,6 +1,6 @@
 //! 测试服务器连接速度示例
 
-use tdx_sync_rust::*;
+use tdx_rust::*;
 
 fn main() {
     println!("=== 测试服务器连接速度 ===\n");

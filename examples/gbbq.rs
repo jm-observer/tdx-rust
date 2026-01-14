@@ -1,6 +1,6 @@
 //! 获取股本变迁数据示例
 
-use tdx_sync_rust::*;
+use tdx_rust::*;
 
 fn main() -> Result<(), ClientError> {
     let client = dial("124.71.187.122")?;
