@@ -37,3 +37,7 @@ path = "examples/kline_all.rs"
 [[example]]
 name = "gbbq"
 path = "examples/gbbq.rs"
+
+[[example]]
+name = "kline_util"
+path = "examples/kline_util.rs"

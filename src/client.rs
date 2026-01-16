@@ -445,6 +445,69 @@ impl Client {
         Ok(all_klines)
     }
 
+    /// 获取所有K线数据（支持自定义过滤）
+    ///
+    /// util_fn: 过滤函数，返回 true 表示保留，返回 false 表示停止后续查询（break）
+    pub async fn get_kline_all_util<F>(
+        &self,
+        kline_type: KlineType,
+        code: &str,
+        util_fn: F,
+    ) -> Result<KlineResponse, ClientError>
+    where
+        F: Fn(&Kline) -> bool,
+    {
+        let mut all_klines = KlineResponse {
+            count: 0,
+            list: Vec::new(),
+        };
+        let batch_size = 800u16;
+        let mut start = 0;
+
+        'outer: loop {
+            let mut resp = self.get_kline(kline_type, code, start, batch_size).await?;
+            let len = resp.list.len();
+
+            // 扫描当前批次数据（从新到旧，即倒序）
+            // 如果遇到不满足条件的，则该点之前（更旧）的数据也认为不满足（根据时间连续性假设）
+            let mut fully_match = true;
+            let mut cut_index = 0;
+
+            for (i, k) in resp.list.iter().enumerate().rev() {
+                if !util_fn(k) {
+                    cut_index = i + 1;
+                    fully_match = false;
+                    break;
+                }
+            }
+
+            if fully_match {
+                // 全部满足，将整个列表加到结果的前面
+                let mut new_list = resp.list;
+                new_list.append(&mut all_klines.list);
+                all_klines.list = new_list;
+                all_klines.count += len as u16;
+            } else {
+                // 部分满足，截取满足的部分
+                // split_offAt cut_index, valid parts are [cut_index..len]
+                let mut valid_part = resp.list.split_off(cut_index);
+                all_klines.count += valid_part.len() as u16;
+                valid_part.append(&mut all_klines.list);
+                all_klines.list = valid_part;
+
+                // 既然已经遇到不满足的了，更旧的数据肯定也不满足，退出循环
+                break 'outer;
+            }
+
+            if resp.count < batch_size {
+                break;
+            }
+            start += batch_size;
+        }
+
+        Ok(all_klines)
+    }
+
     /// 获取1分钟K线数据
     pub async fn get_kline_minute(
         &self,
