@@ -296,23 +296,23 @@ fn decode_k(data: &[u8]) -> Result<(K, usize), MessageError> {
     }
 
     let mut offset = 0;
-    
+
     // 当日收盘价差值（一般2字节）
     let (close_diff, consumed1) = decode_price(&data[offset..]);
     offset += consumed1;
-    
+
     // 前日收盘价差值（一般1字节）
     let (last_diff, consumed2) = decode_price(&data[offset..]);
     offset += consumed2;
-    
+
     // 当日开盘价差值（一般1字节）
     let (open_diff, consumed3) = decode_price(&data[offset..]);
     offset += consumed3;
-    
+
     // 当日最高价差值（一般1字节）
     let (high_diff, consumed4) = decode_price(&data[offset..]);
     offset += consumed4;
-    
+
     // 当日最低价差值（一般1字节）
     let (low_diff, consumed5) = decode_price(&data[offset..]);
     offset += consumed5;
@@ -343,54 +343,63 @@ fn decode_k(data: &[u8]) -> Result<(K, usize), MessageError> {
 
 /// 解码股票代码
 pub fn decode_code(code: &str) -> Result<(Exchange, String), MessageError> {
-    let code = code.to_lowercase();
-    if code.len() < 2 {
+    let code = add_prefix(code);
+    if code.len() != 8 {
         return Err(MessageError::InvalidCode(code));
     }
 
-    let exchange = match &code[..2] {
+    let (exchange_prefix, number) = code.split_at(2);
+    let exchange = match exchange_prefix {
         "sh" => Exchange::SH,
         "sz" => Exchange::SZ,
         "bj" => Exchange::BJ,
         _ => return Err(MessageError::InvalidCode(code)),
     };
 
-    if code.len() < 8 {
-        return Err(MessageError::InvalidCode(code));
-    }
-
-    Ok((exchange, code[2..].to_string()))
+    Ok((exchange, number.to_string()))
 }
 
 /// 添加交易所前缀
 pub fn add_prefix(code: &str) -> String {
     let code = code.to_lowercase();
-    if code.starts_with("sh") || code.starts_with("sz") || code.starts_with("bj") {
-        return code;
-    }
-    // 根据代码前缀自动添加交易所
-    if code.starts_with("6") || code.starts_with("9") {
-        format!("sh{}", code)
-    } else if code.starts_with("0") || code.starts_with("3") || code.starts_with("2") {
-        format!("sz{}", code)
-    } else if code.starts_with("4") || code.starts_with("8") {
-        format!("bj{}", code)
+    if code.len() == 6 {
+        if is_sh_stock(&code) {
+            format!("sh{}", code)
+        } else if is_sz_stock(&code) {
+            format!("sz{}", code)
+        } else if is_bj_stock(&code) {
+            format!("bj{}", code)
+        } else if is_sh_etf(&code) {
+            format!("sh{}", code)
+        } else if is_sz_etf(&code) {
+            format!("sz{}", code)
+        } else if is_bj_etf(&code) {
+            format!("bj{}", code)
+        } else if is_sh_index(&code) {
+            format!("sh{}", code)
+        } else if is_sz_index(&code) {
+            format!("sz{}", code)
+        } else if is_bj_index(&code) {
+            format!("bj{}", code)
+        } else {
+            code
+        }
     } else {
-        format!("sz{}", code)
+        code
     }
 }
 
 /// 判断是否为股票代码
 pub fn is_stock(code: &str) -> bool {
     let code = add_prefix(code);
-    if code.len() < 8 {
+    if code.len() != 8 {
         return false;
     }
-    let num = &code[2..];
-    match &code[..2] {
-        "sh" => num.starts_with("6") || num.starts_with("688"),
-        "sz" => num.starts_with("0") || num.starts_with("3"),
-        "bj" => num.starts_with("4") || num.starts_with("8"),
+    let (exchange_prefix, number) = code.split_at(2);
+    match exchange_prefix {
+        "sh" => is_sh_stock(number),
+        "sz" => is_sz_stock(number),
+        "bj" => is_bj_stock(number),
         _ => false,
     }
 }
@@ -398,13 +407,14 @@ pub fn is_stock(code: &str) -> bool {
 /// 判断是否为ETF
 pub fn is_etf(code: &str) -> bool {
     let code = add_prefix(code);
-    if code.len() < 8 {
+    if code.len() != 8 {
         return false;
     }
-    let num = &code[2..];
-    match &code[..2] {
-        "sh" => num.starts_with("51") || num.starts_with("56") || num.starts_with("58"),
-        "sz" => num.starts_with("15") || num.starts_with("16"),
+    let (exchange_prefix, number) = code.split_at(2);
+    match exchange_prefix {
+        "sh" => is_sh_etf(number),
+        "sz" => is_sz_etf(number),
+        "bj" => is_bj_etf(number),
         _ => false,
     }
 }
@@ -412,16 +422,52 @@ pub fn is_etf(code: &str) -> bool {
 /// 判断是否为指数
 pub fn is_index(code: &str) -> bool {
     let code = add_prefix(code);
-    if code.len() < 8 {
+    if code.len() != 8 {
         return false;
     }
-    let num = &code[2..];
-    match &code[..2] {
-        "sh" => num.starts_with("000") || num.starts_with("880"),
-        "sz" => num.starts_with("399"),
-        "bj" => num.starts_with("899"),
+    let (exchange_prefix, number) = code.split_at(2);
+    match exchange_prefix {
+        "sh" => is_sh_index(number),
+        "sz" => is_sz_index(number),
+        "bj" => is_bj_index(number),
         _ => false,
     }
+}
+
+fn is_sh_stock(code: &str) -> bool {
+    code.len() == 6 && code.starts_with('6')
+}
+
+fn is_sz_stock(code: &str) -> bool {
+    code.len() == 6 && (code.starts_with('0') || code.starts_with("30"))
+}
+
+fn is_bj_stock(code: &str) -> bool {
+    code.len() == 6 && code.starts_with("92")
+}
+
+fn is_sh_etf(code: &str) -> bool {
+    code.len() == 6 && (code.starts_with("51") || code.starts_with("56") || code.starts_with("58"))
+}
+
+fn is_sz_etf(code: &str) -> bool {
+    code.len() == 6 && code.starts_with("15")
+}
+
+fn is_bj_etf(code: &str) -> bool {
+    code.len() == 6 && false
+}
+
+fn is_sh_index(code: &str) -> bool {
+    code.len() == 6 && (code.starts_with("000") || code == "999999")
+}
+
+fn is_sz_index(code: &str) -> bool {
+    code.len() == 6 && code.starts_with("399")
+}
+
+fn is_bj_index(code: &str) -> bool {
+    code.len() == 6 && code.starts_with("899")
 }
 
 // ==================== K线数据消息 ====================
@@ -546,12 +592,12 @@ fn decode_kline_time(data: &[u8], kline_type: u8) -> SystemTime {
     // 根据K线类型解析时间
     let (year, month, day, hour, minute) = match kline_type {
         // 分钟级K线：前2字节是年月日压缩格式，后2字节是小时分钟
-        // TypeKlineMinute=7, TypeKlineMinute2=8, TypeKline5Minute=0, 
+        // TypeKlineMinute=7, TypeKlineMinute2=8, TypeKline5Minute=0,
         // TypeKline15Minute=1, TypeKline30Minute=2, TypeKline60Minute=3, TypeKlineDay2=4
         0 | 1 | 2 | 3 | 4 | 7 | 8 => {
             let year_month_day = bytes_to_u16_le(&data[0..2]);
             let hour_minute = bytes_to_u16_le(&data[2..4]);
-            
+
             // year = (yearMonthDay >> 11) + 2004
             // month = (yearMonthDay % 2048) / 100
             // day = (yearMonthDay % 2048) % 100
@@ -584,17 +630,17 @@ fn days_from_date(year: i32, month: u32, day: u32) -> i64 {
     let y = year as i64;
     let m = month as i64;
     let d = day as i64;
-    
+
     // 调整月份（1、2月算作上一年的13、14月）
     let (y2, m2) = if m <= 2 {
         (y - 1, m + 12)
     } else {
         (y, m)
     };
-    
+
     // 计算儒略日
     let jd = 365 * y2 + y2 / 4 - y2 / 100 + y2 / 400 + (153 * m2 - 457) / 5 + d - 306;
-    
+
     // 1970-01-01 的儒略日偏移
     jd - 719163
 }
@@ -617,7 +663,7 @@ impl MinuteMsg {
     }
 
     /// 解码分时数据响应
-    /// 
+    ///
     /// Go 代码参考（model_history_minute.go）：
     /// - 前 2 字节是数量
     /// - 2-6 字节未知
