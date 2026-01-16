@@ -1,10 +1,12 @@
-//! 连接管理
+//! 连接管理（异步）
 
 use crate::client::Client;
 use crate::client::ClientError;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::time::{Duration, Instant};
+use tokio::net::TcpStream;
+use tokio::time;
 
 /// 默认服务器地址列表
 pub const DEFAULT_HOSTS: &[&str] = &[
@@ -23,12 +25,12 @@ pub const DEFAULT_HOSTS: &[&str] = &[
 ];
 
 /// 连接到指定地址
-pub fn dial(addr: &str) -> Result<Client, ClientError> {
-    Client::connect(addr)
+pub async fn dial(addr: &str) -> Result<Client, ClientError> {
+    Client::connect(addr).await
 }
 
 /// 遍历多个地址进行连接，成功则返回
-pub fn dial_hosts_range(hosts: &[&str]) -> Result<Client, ClientError> {
+pub async fn dial_hosts_range(hosts: &[&str]) -> Result<Client, ClientError> {
     let hosts = if hosts.is_empty() {
         DEFAULT_HOSTS
     } else {
@@ -37,23 +39,21 @@ pub fn dial_hosts_range(hosts: &[&str]) -> Result<Client, ClientError> {
 
     let mut last_error = None;
     for host in hosts {
-        match Client::connect(host) {
+        match Client::connect(host).await {
             Ok(client) => return Ok(client),
             Err(e) => {
                 last_error = Some(e);
                 // 等待2秒后尝试下一个
-                std::thread::sleep(Duration::from_secs(2));
+                time::sleep(Duration::from_secs(2)).await;
             }
         }
     }
 
-    Err(last_error.unwrap_or_else(|| {
-        ClientError::Other("所有服务器连接失败".to_string())
-    }))
+    Err(last_error.unwrap_or_else(|| ClientError::Other("所有服务器连接失败".to_string())))
 }
 
 /// 随机选择一个地址连接
-pub fn dial_hosts_random(hosts: &[&str]) -> Result<Client, ClientError> {
+pub async fn dial_hosts_random(hosts: &[&str]) -> Result<Client, ClientError> {
     let hosts = if hosts.is_empty() {
         DEFAULT_HOSTS
     } else {
@@ -65,12 +65,12 @@ pub fn dial_hosts_random(hosts: &[&str]) -> Result<Client, ClientError> {
         .choose(&mut rng)
         .ok_or_else(|| ClientError::Other("没有可用的服务器地址".to_string()))?;
 
-    Client::connect(host)
+    Client::connect(host).await
 }
 
 /// 使用默认连接方式（遍历默认服务器列表）
-pub fn dial_default() -> Result<Client, ClientError> {
-    dial_hosts_range(DEFAULT_HOSTS)
+pub async fn dial_default() -> Result<Client, ClientError> {
+    dial_hosts_range(DEFAULT_HOSTS).await
 }
 
 /// 连接结果（用于测试连接速度）
@@ -81,23 +81,18 @@ pub struct DialResult {
 }
 
 /// 测试多个地址的连接速度并排序
-pub fn fast_hosts(hosts: &[&str]) -> Vec<DialResult> {
-    use std::sync::mpsc;
-    use std::thread;
-
+pub async fn fast_hosts(hosts: &[&str]) -> Vec<DialResult> {
     let hosts = if hosts.is_empty() {
         DEFAULT_HOSTS
     } else {
         hosts
     };
 
-    let (tx, rx) = mpsc::channel();
     let mut handles = Vec::new();
 
     for host in hosts {
-        let tx = tx.clone();
         let host = host.to_string();
-        let handle = thread::spawn(move || {
+        handles.push(tokio::spawn(async move {
             let addr = if host.contains(':') {
                 host.clone()
             } else {
@@ -105,26 +100,21 @@ pub fn fast_hosts(hosts: &[&str]) -> Vec<DialResult> {
             };
 
             let start = Instant::now();
-            match std::net::TcpStream::connect(&addr) {
-                Ok(_) => {
-                    let duration = start.elapsed();
-                    let _ = tx.send(DialResult { host, duration });
-                }
-                Err(_) => {}
+            match TcpStream::connect(&addr).await {
+                Ok(_) => Some(DialResult {
+                    host,
+                    duration: start.elapsed(),
+                }),
+                Err(_) => None,
             }
-        });
-        handles.push(handle);
+        }));
     }
-
-    drop(tx);
 
     let mut results = Vec::new();
-    while let Ok(result) = rx.recv() {
-        results.push(result);
-    }
-
     for handle in handles {
-        let _ = handle.join();
+        if let Ok(Some(result)) = handle.await {
+            results.push(result);
+        }
     }
 
     // 按连接时间排序

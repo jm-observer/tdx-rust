@@ -1,8 +1,9 @@
-//! 测试服务器连接速度示例
+//! 测试服务器连接速度示例（异步）
 
 use tdx_rust::*;
 
-fn main() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
     println!("=== 测试服务器连接速度 ===\n");
 
     let hosts = &[
@@ -15,7 +16,7 @@ fn main() {
 
     println!("正在测试 {} 个服务器地址...\n", hosts.len());
 
-    let results = fast_hosts(hosts);
+    let results = fast_hosts(hosts).await;
 
     if results.is_empty() {
         println!("没有可用的服务器地址");
@@ -37,11 +38,11 @@ fn main() {
     // 使用最快的服务器连接
     if let Some(fastest) = results.first() {
         println!("\n使用最快的服务器连接: {}", fastest.host);
-        match dial(&fastest.host) {
+        match dial(&fastest.host).await {
             Ok(client) => {
                 println!("连接成功！");
                 // 测试获取股票数量
-                match client.get_count(Exchange::SH) {
+                match client.get_count(Exchange::SH).await {
                     Ok(count) => println!("上海交易所股票数量: {}", count),
                     Err(e) => println!("获取股票数量失败: {}", e),
                 }
