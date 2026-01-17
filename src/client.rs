@@ -1,6 +1,7 @@
 //! TDX 客户端实现（异步）
 
 use crate::protocol::*;
+use chrono::{FixedOffset, Utc};
 use log::debug;
 use std::io;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -749,45 +750,13 @@ impl Client {
         self.get_history_minute(&today, code).await
     }
 
-    /// 获取当前日期字符串（YYYYMMDD格式）
+    /// 获取当前日期字符串（YYYYMMDD格式，北京时间）
     fn today_str() -> String {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let secs = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let days = secs / 86400;
-
-        let mut year = 1970i32;
-        let mut remaining = days as i32;
-        loop {
-            let days_in_year = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
-                366
-            } else {
-                365
-            };
-            if remaining < days_in_year {
-                break;
-            }
-            remaining -= days_in_year;
-            year += 1;
-        }
-        let days_in_month = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
-            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        } else {
-            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        };
-        let mut month = 1u32;
-        for d in days_in_month.iter() {
-            if remaining < *d {
-                break;
-            }
-            remaining -= d;
-            month += 1;
-        }
-        let day = remaining + 1;
-
-        format!("{:04}{:02}{:02}", year, month, day)
+        let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+        Utc::now()
+            .with_timezone(&beijing_offset)
+            .format("%Y%m%d")
+            .to_string()
     }
 
     /// 获取历史分时数据
@@ -800,7 +769,7 @@ impl Client {
         let code = add_prefix(code);
         let frame = HistoryMinuteMsg::request(self.next_msg_id(), date, &code)?;
         let response = self.send_frame(frame).await?;
-        let minute = HistoryMinuteMsg::decode_response(response.data())?;
+        let minute = HistoryMinuteMsg::decode_response(response.data(), date)?;
         Ok(minute)
     }
 
@@ -818,13 +787,9 @@ impl Client {
         let response = self.send_frame(frame).await?;
 
         // 获取当天日期
-        let now = std::time::SystemTime::now();
-        let duration = now
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default();
-        let days = duration.as_secs() / 86400;
-        let year = 1970 + (days / 365) as u32; // 简化计算
-        let date = format!("{:04}0101", year); // 简化，实际应该用真实日期
+        let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+        let now = Utc::now().with_timezone(&beijing_offset);
+        let date = now.format("%Y%m%d").to_string();
 
         let cache = TradeCache {
             date,

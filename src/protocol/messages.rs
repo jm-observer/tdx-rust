@@ -1,19 +1,19 @@
 //! 各种消息类型的编解码实现
 
 use crate::protocol::{
-    constants::{Exchange, KlineType, MessageType},
     codec::{
         bytes_to_u16_le, bytes_to_u32_le, decode_price, decode_varint, decode_volume2, gbk_to_utf8,
         u16_to_bytes_le, u32_to_bytes_le,
     },
+    constants::{Exchange, KlineType, MessageType},
     frame::RequestFrame,
     types::{
-        CallAuction, CallAuctionResponse, Gbbq, GbbqResponse, K, Kline, KlineCache, KlineResponse,
+        CallAuction, CallAuctionResponse, Gbbq, GbbqResponse, Kline, KlineCache, KlineResponse,
         MinuteResponse, Price, PriceLevel, PriceNumber, QuoteInfo, StockCode, Trade, TradeResponse,
-        TradeStatus,
+        TradeStatus, K,
     },
 };
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use chrono::{Datelike, FixedOffset, TimeZone, Utc};
 use thiserror::Error;
 
 /// 消息编解码错误
@@ -169,8 +169,9 @@ impl Quote {
 
             // 交易所：0=深圳，1=上海，2=北京
             let exchange_val = data[offset];
-            let exchange = Exchange::from_u8(exchange_val)
-                .ok_or_else(|| MessageError::ParseError(format!("无效的交易所: {}", exchange_val)))?;
+            let exchange = Exchange::from_u8(exchange_val).ok_or_else(|| {
+                MessageError::ParseError(format!("无效的交易所: {}", exchange_val))
+            })?;
             offset += 1;
 
             // 股票代码（6字节）
@@ -223,8 +224,16 @@ impl Quote {
             offset += consumed;
 
             // 5档买卖盘
-            let mut buy_level = [PriceLevel { buy: true, price: Price(0), number: 0 }; 5];
-            let mut sell_level = [PriceLevel { buy: false, price: Price(0), number: 0 }; 5];
+            let mut buy_level = [PriceLevel {
+                buy: true,
+                price: Price(0),
+                number: 0,
+            }; 5];
+            let mut sell_level = [PriceLevel {
+                buy: false,
+                price: Price(0),
+                number: 0,
+            }; 5];
 
             for i in 0..5 {
                 // 买价差值
@@ -477,7 +486,13 @@ pub struct KlineMsg;
 
 impl KlineMsg {
     /// 创建K线数据请求帧
-    pub fn request(msg_id: u32, kline_type: KlineType, code: &str, start: u16, count: u16) -> Result<RequestFrame, MessageError> {
+    pub fn request(
+        msg_id: u32,
+        kline_type: KlineType,
+        code: &str,
+        start: u16,
+        count: u16,
+    ) -> Result<RequestFrame, MessageError> {
         if count > 800 {
             return Err(MessageError::ParseError("单次数量不能超过800".to_string()));
         }
@@ -588,7 +603,7 @@ impl KlineMsg {
 }
 
 /// 解码K线时间
-fn decode_kline_time(data: &[u8], kline_type: u8) -> SystemTime {
+fn decode_kline_time(data: &[u8], kline_type: u8) -> i64 {
     // 根据K线类型解析时间
     let (year, month, day, hour, minute) = match kline_type {
         // 分钟级K线：前2字节是年月日压缩格式，后2字节是小时分钟
@@ -598,9 +613,6 @@ fn decode_kline_time(data: &[u8], kline_type: u8) -> SystemTime {
             let year_month_day = bytes_to_u16_le(&data[0..2]);
             let hour_minute = bytes_to_u16_le(&data[2..4]);
 
-            // year = (yearMonthDay >> 11) + 2004
-            // month = (yearMonthDay % 2048) / 100
-            // day = (yearMonthDay % 2048) % 100
             let year = ((year_month_day >> 11) + 2004) as i32;
             let month = ((year_month_day % 2048) / 100) as u32;
             let day = ((year_month_day % 2048) % 100) as u32;
@@ -618,32 +630,17 @@ fn decode_kline_time(data: &[u8], kline_type: u8) -> SystemTime {
         }
     };
 
-    // 转换为 SystemTime
-    let days_since_epoch = days_from_date(year, month, day);
-    let secs = days_since_epoch as u64 * 86400 + hour as u64 * 3600 + minute as u64 * 60;
-    UNIX_EPOCH + Duration::from_secs(secs)
+    // 转换为 Unix 时间戳（秒）
+    // 通达信返回的时间均为北京时间 (UTC+8)
+    let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+    beijing_offset
+        .with_ymd_and_hms(year, month, day, hour, minute, 0)
+        .single()
+        .map(|dt| dt.timestamp())
+        .unwrap_or(0)
 }
 
-/// 计算从1970年1月1日到指定日期的天数（修正版）
-fn days_from_date(year: i32, month: u32, day: u32) -> i64 {
-    // 使用更准确的儒略日算法
-    let y = year as i64;
-    let m = month as i64;
-    let d = day as i64;
-
-    // 调整月份（1、2月算作上一年的13、14月）
-    let (y2, m2) = if m <= 2 {
-        (y - 1, m + 12)
-    } else {
-        (y, m)
-    };
-
-    // 计算儒略日
-    let jd = 365 * y2 + y2 / 4 - y2 / 100 + y2 / 400 + (153 * m2 - 457) / 5 + d - 306;
-
-    // 1970-01-01 的儒略日偏移
-    jd - 719163
-}
+// 移除不再需要的 days_from_date
 
 // ==================== 分时数据消息 ====================
 
@@ -671,7 +668,7 @@ impl MinuteMsg {
     /// - 价格是累加的，且要乘以 10
     /// - 时间从 09:30 开始，使用 i+1 分钟
     /// - 当 i==120 时额外加 90 分钟
-    pub fn decode_response(data: &[u8]) -> Result<MinuteResponse, MessageError> {
+    pub fn decode_response(data: &[u8], date: &str) -> Result<MinuteResponse, MessageError> {
         if data.len() < 6 {
             return Err(MessageError::InsufficientData);
         }
@@ -711,15 +708,17 @@ impl MinuteMsg {
             offset += consumed;
 
             // 计算时间：从 09:30 开始，使用 i+1 分钟
-            // i=0 -> 09:31, i=1 -> 09:32, ..., i=119 -> 11:30
-            // i=120 时 t += 90 分钟 (09:30 + 90 = 11:00)
-            // i=120 -> 11:00 + 121分钟 = 13:01, i=121 -> 13:02, ...
-            let total_minutes = if i < 120 {
-                9 * 60 + 30 + (i + 1) as u32  // 09:30 + (i+1) 分钟
+            let hour = if i < 120 {
+                (9 * 60 + 30 + (i + 1) as u32) / 60
             } else {
-                11 * 60 + (i + 1) as u32      // 11:00 + (i+1) 分钟
+                (11 * 60 + (i + 1) as u32) / 60
             };
-            let time = format!("{:02}:{:02}", total_minutes / 60, total_minutes % 60);
+            let minute = if i < 120 {
+                (9 * 60 + 30 + (i + 1) as u32) % 60
+            } else {
+                (11 * 60 + (i + 1) as u32) % 60
+            };
+            let time = parse_datetime(date, hour, minute, 0);
 
             // 价格乘以 10（multiple）
             let price = Price(last_price.0 * 10);
@@ -745,7 +744,9 @@ impl HistoryMinuteMsg {
     /// date格式：YYYYMMDD
     pub fn request(msg_id: u32, date: &str, code: &str) -> Result<RequestFrame, MessageError> {
         let (exchange, number) = decode_code(code)?;
-        let date_num: u32 = date.parse().map_err(|_| MessageError::ParseError("无效的日期格式".to_string()))?;
+        let date_num: u32 = date
+            .parse()
+            .map_err(|_| MessageError::ParseError("无效的日期格式".to_string()))?;
 
         let mut data = u32_to_bytes_le(date_num).to_vec();
         data.push(exchange.as_u8());
@@ -756,8 +757,8 @@ impl HistoryMinuteMsg {
 
     /// 解码历史分时数据响应
     /// 与 MinuteMsg::decode_response 格式相同
-    pub fn decode_response(data: &[u8]) -> Result<MinuteResponse, MessageError> {
-        MinuteMsg::decode_response(data)
+    pub fn decode_response(data: &[u8], date: &str) -> Result<MinuteResponse, MessageError> {
+        MinuteMsg::decode_response(data, date)
     }
 }
 
@@ -769,13 +770,18 @@ pub struct TradeMsg;
 /// 交易缓存信息
 #[derive(Debug, Clone)]
 pub struct TradeCache {
-    pub date: String,   // 日期 YYYYMMDD
-    pub code: String,   // 股票代码
+    pub date: String, // 日期 YYYYMMDD
+    pub code: String, // 股票代码
 }
 
 impl TradeMsg {
     /// 创建分时交易请求帧
-    pub fn request(msg_id: u32, code: &str, start: u16, count: u16) -> Result<RequestFrame, MessageError> {
+    pub fn request(
+        msg_id: u32,
+        code: &str,
+        start: u16,
+        count: u16,
+    ) -> Result<RequestFrame, MessageError> {
         let (exchange, number) = decode_code(code)?;
 
         let mut data = vec![exchange.as_u8(), 0x00];
@@ -857,9 +863,17 @@ pub struct HistoryTradeMsg;
 
 impl HistoryTradeMsg {
     /// 创建历史分时交易请求帧
-    pub fn request(msg_id: u32, date: &str, code: &str, start: u16, count: u16) -> Result<RequestFrame, MessageError> {
+    pub fn request(
+        msg_id: u32,
+        date: &str,
+        code: &str,
+        start: u16,
+        count: u16,
+    ) -> Result<RequestFrame, MessageError> {
         let (exchange, number) = decode_code(code)?;
-        let date_num: u32 = date.parse().map_err(|_| MessageError::ParseError("无效的日期格式".to_string()))?;
+        let date_num: u32 = date
+            .parse()
+            .map_err(|_| MessageError::ParseError("无效的日期格式".to_string()))?;
 
         let mut data = u32_to_bytes_le(date_num).to_vec();
         data.push(exchange.as_u8());
@@ -868,7 +882,11 @@ impl HistoryTradeMsg {
         data.extend_from_slice(&u16_to_bytes_le(start));
         data.extend_from_slice(&u16_to_bytes_le(count));
 
-        Ok(RequestFrame::new(msg_id, MessageType::HistoryMinuteTrade, data))
+        Ok(RequestFrame::new(
+            msg_id,
+            MessageType::HistoryMinuteTrade,
+            data,
+        ))
     }
 
     /// 解码历史分时交易响应
@@ -944,11 +962,8 @@ impl CallAuctionMsg {
         let mut data = vec![exchange.as_u8(), 0x00];
         data.extend_from_slice(number.as_bytes());
         data.extend_from_slice(&[
-            0x00, 0x00, 0x00, 0x00,
-            0x03, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0xf4, 0x01, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xf4, 0x01, 0x00, 0x00,
         ]);
 
         Ok(RequestFrame::new(msg_id, MessageType::CallAuction, data))
@@ -974,7 +989,12 @@ impl CallAuctionMsg {
             let minute = n % 60;
 
             // 价格（float32）
-            let price_f32 = f32::from_le_bytes([data[offset + 2], data[offset + 3], data[offset + 4], data[offset + 5]]);
+            let price_f32 = f32::from_le_bytes([
+                data[offset + 2],
+                data[offset + 3],
+                data[offset + 4],
+                data[offset + 5],
+            ]);
             let price = Price((price_f32 * 1000.0) as i64);
 
             // 匹配量
@@ -991,12 +1011,20 @@ impl CallAuctionMsg {
             let second = data[offset + 15] as u32;
 
             // 构造时间（使用当天日期）
-            let now = SystemTime::now();
-            let duration = now.duration_since(UNIX_EPOCH).unwrap_or_default();
-            let days = duration.as_secs() / 86400;
-            let time = UNIX_EPOCH + Duration::from_secs(
-                days * 86400 + hour as u64 * 3600 + minute as u64 * 60 + second as u64
-            );
+            let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+            let now = Utc::now().with_timezone(&beijing_offset);
+            let time = beijing_offset
+                .with_ymd_and_hms(
+                    now.year(),
+                    now.month(),
+                    now.day(),
+                    hour as u32,
+                    minute as u32,
+                    second,
+                )
+                .single()
+                .map(|dt| dt.timestamp())
+                .unwrap_or(0);
 
             list.push(CallAuction {
                 time,
@@ -1055,8 +1083,12 @@ impl GbbqMsg {
             let year = (time_val / 10000) as i32;
             let month = ((time_val % 10000) / 100) as u32;
             let day = (time_val % 100) as u32;
-            let days = days_from_date(year, month, day);
-            let time = UNIX_EPOCH + Duration::from_secs((days as u64) * 86400 + 15 * 3600);
+            let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+            let time = beijing_offset
+                .with_ymd_and_hms(year, month, day, 15, 0, 0)
+                .single()
+                .map(|dt| dt.timestamp())
+                .unwrap_or(0);
 
             let category = data[offset + 12] as i32;
             offset += 13;
@@ -1065,21 +1097,56 @@ impl GbbqMsg {
             let (c1, c2, c3, c4) = match category {
                 1 => {
                     // 除权除息：分红、配股价、送转股、配股
-                    let c1 = f32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as f64;
-                    let c2 = f32::from_le_bytes([data[offset + 4], data[offset + 5], data[offset + 6], data[offset + 7]]) as f64;
-                    let c3 = f32::from_le_bytes([data[offset + 8], data[offset + 9], data[offset + 10], data[offset + 11]]) as f64;
-                    let c4 = f32::from_le_bytes([data[offset + 12], data[offset + 13], data[offset + 14], data[offset + 15]]) as f64;
+                    let c1 = f32::from_le_bytes([
+                        data[offset],
+                        data[offset + 1],
+                        data[offset + 2],
+                        data[offset + 3],
+                    ]) as f64;
+                    let c2 = f32::from_le_bytes([
+                        data[offset + 4],
+                        data[offset + 5],
+                        data[offset + 6],
+                        data[offset + 7],
+                    ]) as f64;
+                    let c3 = f32::from_le_bytes([
+                        data[offset + 8],
+                        data[offset + 9],
+                        data[offset + 10],
+                        data[offset + 11],
+                    ]) as f64;
+                    let c4 = f32::from_le_bytes([
+                        data[offset + 12],
+                        data[offset + 13],
+                        data[offset + 14],
+                        data[offset + 15],
+                    ]) as f64;
                     (c1, c2, c3, c4)
                 }
                 11 | 12 => {
                     // 扩缩股
-                    let c3 = f32::from_le_bytes([data[offset + 8], data[offset + 9], data[offset + 10], data[offset + 11]]) as f64;
+                    let c3 = f32::from_le_bytes([
+                        data[offset + 8],
+                        data[offset + 9],
+                        data[offset + 10],
+                        data[offset + 11],
+                    ]) as f64;
                     (0.0, 0.0, c3, 0.0)
                 }
                 13 | 14 => {
                     // 权证
-                    let c1 = f32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as f64;
-                    let c3 = f32::from_le_bytes([data[offset + 8], data[offset + 9], data[offset + 10], data[offset + 11]]) as f64;
+                    let c1 = f32::from_le_bytes([
+                        data[offset],
+                        data[offset + 1],
+                        data[offset + 2],
+                        data[offset + 3],
+                    ]) as f64;
+                    let c3 = f32::from_le_bytes([
+                        data[offset + 8],
+                        data[offset + 9],
+                        data[offset + 10],
+                        data[offset + 11],
+                    ]) as f64;
                     (c1, 0.0, c3, 0.0)
                 }
                 _ => {
@@ -1109,17 +1176,19 @@ impl GbbqMsg {
     }
 }
 
-/// 解析日期时间字符串为 SystemTime
-fn parse_datetime(date: &str, hour: u32, minute: u32, second: u32) -> SystemTime {
+/// 解析日期时间字符串为 Unix 时间戳
+fn parse_datetime(date: &str, hour: u32, minute: u32, second: u32) -> i64 {
     if date.len() != 8 {
-        return UNIX_EPOCH;
+        return 0;
     }
     let year: i32 = date[0..4].parse().unwrap_or(1970);
     let month: u32 = date[4..6].parse().unwrap_or(1);
     let day: u32 = date[6..8].parse().unwrap_or(1);
 
-    let days = days_from_date(year, month, day);
-    UNIX_EPOCH + Duration::from_secs(
-        (days as u64) * 86400 + hour as u64 * 3600 + minute as u64 * 60 + second as u64
-    )
+    let beijing_offset = FixedOffset::east_opt(8 * 3600).unwrap();
+    beijing_offset
+        .with_ymd_and_hms(year, month, day, hour, minute, second)
+        .single()
+        .map(|dt| dt.timestamp())
+        .unwrap_or(0)
 }

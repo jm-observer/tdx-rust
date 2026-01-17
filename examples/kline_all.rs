@@ -1,54 +1,14 @@
 //! 获取所有K线数据示例 - 展示各种周期的K线
 
-use std::time::{SystemTime, UNIX_EPOCH};
 use tdx_rust::*;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), ClientError> {
-    // 获取当前时间
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let secs = now.as_secs();
-    let days = secs / 86400;
-    let time_of_day = secs % 86400;
-    let hours = (time_of_day / 3600 + 8) % 24; // UTC+8
-    let minutes = (time_of_day % 3600) / 60;
-    let seconds = time_of_day % 60;
-
-    // 简单计算年月日
-    let mut year = 1970i32;
-    let mut remaining = days as i32;
-    loop {
-        let days_in_year = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
-            366
-        } else {
-            365
-        };
-        if remaining < days_in_year {
-            break;
-        }
-        remaining -= days_in_year;
-        year += 1;
-    }
-    let days_in_month = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
-    let mut month = 1;
-    for d in days_in_month.iter() {
-        if remaining < *d {
-            break;
-        }
-        remaining -= d;
-        month += 1;
-    }
-    let day = remaining + 1;
-
+    // 获取当前时间 (北京时间)
+    let beijing_offset = chrono::FixedOffset::east_opt(8 * 3600).unwrap();
+    let now = chrono::Utc::now().with_timezone(&beijing_offset);
     println!("=== 获取 sz000001 各周期K线数据 ===");
-    println!(
-        "当前时间: {:04}-{:02}-{:02} {:02}:{:02}:{:02}\n",
-        year, month, day, hours, minutes, seconds
-    );
+    println!("当前时间: {}\n", now.format("%Y-%m-%d %H:%M:%S"));
 
     // 连接服务器
     let client = dial("124.71.187.122").await?;
