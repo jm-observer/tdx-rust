@@ -2,8 +2,9 @@
 
 use crate::client::Client;
 use crate::client::ClientError;
+use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::SeedableRng;
 use std::time::{Duration, Instant};
 use tokio::net::TcpStream;
 use tokio::time;
@@ -60,7 +61,8 @@ pub async fn dial_hosts_random(hosts: &[&str]) -> Result<Client, ClientError> {
         hosts
     };
 
-    let mut rng = thread_rng();
+    // Use a Send-friendly RNG so this async fn can be spawned onto the multithread runtime.
+    let mut rng = StdRng::from_entropy();
     let host = hosts
         .choose(&mut rng)
         .ok_or_else(|| ClientError::Other("没有可用的服务器地址".to_string()))?;
