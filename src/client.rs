@@ -509,6 +509,27 @@ impl Client {
         Ok(all_klines)
     }
 
+    /// 获取所有K线数据（支持时间范围）
+    ///
+    /// start_time 和 end_time 均为 Unix 时间戳（秒）
+    pub async fn get_kline_all_during(
+        &self,
+        kline_type: KlineType,
+        code: &str,
+        start_time: u64,
+        end_time: u64,
+    ) -> Result<KlineResponse, ClientError> {
+        let mut resp = self
+            .get_kline_all_util(kline_type, code, |k| k.time as u64 >= start_time)
+            .await?;
+
+        // 进一步过滤掉大于 end_time 的数据（如果有的话）
+        resp.list.retain(|k| k.time as u64 <= end_time);
+        resp.count = resp.list.len() as u16;
+
+        Ok(resp)
+    }
+
     /// 获取1分钟K线数据
     pub async fn get_kline_minute(
         &self,
